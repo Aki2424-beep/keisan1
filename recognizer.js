@@ -3,14 +3,14 @@ const templates=[];
 const path=s=>s.split('|').map(line=>line.trim().split(' ').map(p=>{const [x,y]=p.split(',').map(Number);return{x,y};}));
 const shapes={
  '0':['5,0 1,1 0,5 1,9 5,10 9,9 10,5 9,1 5,0'],
- '1':['2,2 5,0 5,10','5,0 5,10','2,2 5,0 5,10|2,10 8,10'],
+ '1':['2,2 5,0 5,10','5,0 5,10','2,2 5,0 5,10|2,10 8,10','3,1 5,0 5,10 4,10'],
  '2':['0,2 2,0 7,0 10,2 9,4 0,10 10,10','0,2 3,0 8,1 9,3 6,6 0,10 10,10'],
- '3':['0,1 4,0 9,1 10,3 5,5 9,6 10,8 7,10 1,10 0,9'],
+ '3':['0,1 4,0 9,1 10,3 5,5 9,6 10,8 7,10 1,10 0,9','1,1 3,0 7,0 9,1 9,3 7,4 4,5 7,5 9,6 10,8 8,10 3,10 0,8','0,0 10,0 5,5 9,6 10,8 7,10 1,10'],
  '4':['7,0 0,7 10,7|7,0 7,10','0,0 0,6 9,6|8,0 8,10'],
- '5':['10,0 1,0 0,5 6,4 9,6 9,8 6,10 0,9'],
+ '5':['10,0 1,0 0,5 6,4 9,6 9,8 6,10 0,9','1,0 0,5 4,4 8,5 10,7 9,9 6,10 2,10 0,9|1,0 10,0'],
  '6':['9,1 6,0 2,3 0,7 2,10 7,10 10,7 8,5 3,5 0,7'],
- '7':['0,0 10,0 4,10','0,0 10,0 4,10|2,5 8,5'],
- '8':['5,5 1,3 2,0 7,0 9,3 5,5 0,8 2,10 8,10 10,8 5,5'],
+ '7':['0,0 10,0 4,10','0,0 10,0 4,10|2,5 8,5','0,0 0,2|0,0 10,0 4,10'],
+ '8':['5,5 1,3 2,0 7,0 9,3 5,5 0,8 2,10 8,10 10,8 5,5','5,0 2,0 1,2 2,4 5,5 8,4 9,2 8,0 5,0|5,5 1,6 0,8 2,10 7,10 10,8 9,6 5,5'],
  '9':['9,5 4,5 1,3 2,0 7,0 9,3 9,7 6,10 2,10'],
  '+':['0,5 10,5|5,0 5,10'], '-':['0,5 10,5'],
  '×':['0,0 10,10|0,10 10,0'], '/':['0,10 10,0'],
@@ -22,8 +22,8 @@ const shapes={
 };
 export function bounds(strokes){const pts=strokes.flatMap(s=>s.points);if(!pts.length)return null;let x=Infinity,y=Infinity,r=-Infinity,b=-Infinity;for(const p of pts){x=Math.min(x,p.x);y=Math.min(y,p.y);r=Math.max(r,p.x);b=Math.max(b,p.y);}return{x,y,w:r-x,h:b-y};}
 function cloud(lines){let lengths=lines.map(l=>l.slice(1).reduce((a,p,i)=>a+Math.hypot(p.x-l[i].x,p.y-l[i].y),0)),total=lengths.reduce((a,b)=>a+b,0);let points=[];lines.forEach((line,k)=>{let count=Math.max(2,Math.round(40*lengths[k]/(total||1)));for(let i=0;i<count;i++){let target=lengths[k]*i/(count-1),dist=0;let p=line[0];for(let j=1;j<line.length;j++){let a=line[j-1],b=line[j],d=Math.hypot(b.x-a.x,b.y-a.y);if(dist+d>=target){let t=d?(target-dist)/d:0;p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};break;}dist+=d;p=b;}points.push(p);}});const b=bounds([{points}]),scale=Math.max(b.w,b.h,1);return points.map(p=>({x:(p.x-b.x-b.w/2)/scale,y:(p.y-b.y-b.h/2)/scale}));}
-for(const [label,variants] of Object.entries(shapes))for(const v of variants)for(const aspect of [.75,1,1.25,1.5])templates.push({label,points:cloud(path(v).map(line=>line.map(p=>({x:p.x,y:p.y*aspect})))),count:path(v).length});
-function distance(a,b){return a.reduce((sum,p)=>sum+Math.min(...b.map(q=>Math.hypot(p.x-q.x,p.y-q.y))),0)/a.length;}
+for(const [label,variants] of Object.entries(shapes))for(const v of variants)for(const aspect of [.65,1,1.25,1.6,2])for(const slant of [-.15,0,.15])templates.push({label,points:cloud(path(v).map(line=>line.map(p=>({x:p.x+slant*p.y,y:p.y*aspect})))),count:path(v).length});
+function distance(a,b){let sum=0;for(const p of a){let best=Infinity;for(const q of b){const dx=p.x-q.x,dy=p.y-q.y;best=Math.min(best,dx*dx+dy*dy);}sum+=Math.sqrt(best);}return sum/a.length;}
 export function recognize(strokes){
  if(!strokes.length)throw Error('手書きの数式を囲んでください。');
  let groups=strokes.map(s=>({strokes:[s],b:bounds([s])})).sort((a,b)=>a.b.x-b.b.x);
